@@ -8,6 +8,7 @@
 #import <Metal/MTLDrawableInternal.h>
 #import <Metal/stubs.h>
 #import <Metal/MTLRenderCommandEncoderInternal.h>
+#import <Metal/MTLBlitCommandEncoderInternal.h>
 
 #if DARLING_METAL_ENABLED
 // used to take care of RR while passing the block around in C++ code
@@ -52,6 +53,7 @@ struct MTLCommandBufferHandlerWrapper {
 
 {
 	std::shared_ptr<Indium::CommandBuffer> _commandBuffer;
+	MTLCommandBufferStatus _status;
 }
 
 @synthesize device = _device;
@@ -65,7 +67,8 @@ struct MTLCommandBufferHandlerWrapper {
 	if (self != nil) {
 		_commandBuffer = commandBuffer;
 		_device = [commandQueue.device retain];
-		_commandQueue = [_commandQueue retain];
+		_commandQueue = [commandQueue retain];
+		_status = MTLCommandBufferStatusNotEnqueued;
 	}
 	return self;
 }
@@ -116,7 +119,29 @@ struct MTLCommandBufferHandlerWrapper {
 
 - (void)addCompletedHandler: (MTLCommandBufferHandler)block
 {
-	_commandBuffer->addCompletedHandler(MTLCommandBufferHandlerWrapper(block, self));
+	MTLCommandBufferHandler handler = ^(id<MTLCommandBuffer> commandBuffer) {
+		// Metal reports the buffer as completed by the time its completion handlers run
+		((MTLCommandBufferInternal*)commandBuffer)->_status = MTLCommandBufferStatusCompleted;
+		block(commandBuffer);
+	};
+	_commandBuffer->addCompletedHandler(MTLCommandBufferHandlerWrapper(handler, self));
+}
+
+- (void)addScheduledHandler: (MTLCommandBufferHandler)block
+{
+	MTLCommandBufferHandler handler = ^(id<MTLCommandBuffer> commandBuffer) {
+		MTLCommandBufferInternal* internal = (MTLCommandBufferInternal*)commandBuffer;
+		if (internal->_status < MTLCommandBufferStatusScheduled) {
+			internal->_status = MTLCommandBufferStatusScheduled;
+		}
+		block(commandBuffer);
+	};
+	_commandBuffer->addScheduledHandler(MTLCommandBufferHandlerWrapper(handler, self));
+}
+
+- (void)waitUntilScheduled
+{
+	// Indium submits the work as soon as the buffer is committed
 }
 
 - (void)waitUntilCompleted
@@ -129,9 +154,94 @@ struct MTLCommandBufferHandlerWrapper {
 	_commandBuffer->presentDrawable(((id<MTLDrawableInternal>)drawable).drawable);
 }
 
+- (void)presentDrawable: (id<MTLDrawable>)drawable
+                 atTime: (CFTimeInterval)presentationTime
+{
+	// no presentation timing control; present as soon as possible
+	[self presentDrawable: drawable];
+}
+
+- (void)presentDrawable: (id<MTLDrawable>)drawable
+   afterMinimumDuration: (CFTimeInterval)duration
+{
+	[self presentDrawable: drawable];
+}
+
+- (void)enqueue
+{
+	if (_status < MTLCommandBufferStatusEnqueued) {
+		_status = MTLCommandBufferStatusEnqueued;
+	}
+}
+
 - (void)commit
 {
+	if (_status < MTLCommandBufferStatusCommitted) {
+		_status = MTLCommandBufferStatusCommitted;
+	}
+
+	// keep `status` up to date even when nobody else waits for completion
+	_commandBuffer->addCompletedHandler(MTLCommandBufferHandlerWrapper(^(id<MTLCommandBuffer> commandBuffer) {
+		((MTLCommandBufferInternal*)commandBuffer)->_status = MTLCommandBufferStatusCompleted;
+	}, self));
+
 	_commandBuffer->commit();
+}
+
+- (id<MTLBlitCommandEncoder>)blitCommandEncoder
+{
+	auto encoder = _commandBuffer->blitCommandEncoder();
+	if (!encoder) {
+		return nil;
+	}
+	return [[[MTLBlitCommandEncoderInternal alloc] initWithEncoder: encoder device: _device] autorelease];
+}
+
+- (MTLCommandBufferStatus)status
+{
+	return _status;
+}
+
+- (NSError*)error
+{
+	// Indium doesn't report command buffer failures
+	return nil;
+}
+
+- (BOOL)retainedReferences
+{
+	return YES;
+}
+
+// GPU timing isn't tracked
+
+- (CFTimeInterval)kernelStartTime
+{
+	return 0;
+}
+
+- (CFTimeInterval)kernelEndTime
+{
+	return 0;
+}
+
+- (CFTimeInterval)GPUStartTime
+{
+	return 0;
+}
+
+- (CFTimeInterval)GPUEndTime
+{
+	return 0;
+}
+
+- (void)pushDebugGroup: (NSString*)string
+{
+	// debug groups are only for GPU debugging tools, which we don't have
+}
+
+- (void)popDebugGroup
+{
 }
 
 #else

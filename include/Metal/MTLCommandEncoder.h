@@ -16,6 +16,10 @@ METAL_DECLARATIONS_BEGIN
 
 - (void)endEncoding;
 
+- (void)insertDebugSignpost: (NSString*)string;
+- (void)pushDebugGroup: (NSString*)string;
+- (void)popDebugGroup;
+
 @end
 
 METAL_DECLARATIONS_END

@@ -6,6 +6,8 @@
 #import <Metal/MTLTypesInternal.h>
 #import <Metal/MTLComputePipelineInternal.h>
 #import <Metal/MTLBufferInternal.h>
+#import <Metal/MTLTextureInternal.h>
+#import <Metal/MTLSamplerInternal.h>
 #import <Metal/stubs.h>
 
 @implementation MTLComputePassSampleBufferAttachmentDescriptor
@@ -201,6 +203,19 @@ MTL_UNSUPPORTED_CLASS
 	_encoder->endEncoding();
 }
 
+- (void)insertDebugSignpost: (NSString*)string
+{
+	// debug markers are only for GPU debugging tools, which we don't have
+}
+
+- (void)pushDebugGroup: (NSString*)string
+{
+}
+
+- (void)popDebugGroup
+{
+}
+
 - (MTLDispatchType)dispatchType
 {
 	return static_cast<MTLDispatchType>(_encoder->dispatchType());
@@ -252,10 +267,61 @@ MTL_UNSUPPORTED_CLASS
 	_encoder->dispatchThreadgroups(MTLSizeToIndium(threadgroupsPerGrid), MTLSizeToIndium(threadsPerThreadgroup));
 }
 
-- (void)dispatchThreads: (MTLSize)threadsPerGrid 
+- (void)dispatchThreads: (MTLSize)threadsPerGrid
   threadsPerThreadgroup: (MTLSize)threadsPerThreadgroup
 {
 	_encoder->dispatchThreads(MTLSizeToIndium(threadsPerGrid), MTLSizeToIndium(threadsPerThreadgroup));
+}
+
+- (void)setTexture: (id<MTLTexture>)texture
+           atIndex: (NSUInteger)index
+{
+	_encoder->setTexture(((MTLTextureInternal*)texture).texture, index);
+}
+
+- (void)setTextures: (const id<MTLTexture> __nullable [__nonnull])textures
+          withRange: (NSRange)range
+{
+	_encoder->setTextures(MTLTexturesToIndium(textures, range.length), NSRangeToIndium(range));
+}
+
+- (void)setSamplerState: (id<MTLSamplerState>)sampler
+                atIndex: (NSUInteger)index
+{
+	_encoder->setSamplerState(((MTLSamplerStateInternal*)sampler).state, index);
+}
+
+- (void)setSamplerState: (id<MTLSamplerState>)sampler
+            lodMinClamp: (float)lodMinClamp
+            lodMaxClamp: (float)lodMaxClamp
+                atIndex: (NSUInteger)index
+{
+	_encoder->setSamplerState(((MTLSamplerStateInternal*)sampler).state, lodMinClamp, lodMaxClamp, index);
+}
+
+- (void)setSamplerStates: (const id<MTLSamplerState> __nullable [__nonnull])samplers
+               withRange: (NSRange)range
+{
+	_encoder->setSamplerStates(MTLSamplerStatesToIndium(samplers, range.length), NSRangeToIndium(range));
+}
+
+- (void)setThreadgroupMemoryLength: (NSUInteger)length
+                           atIndex: (NSUInteger)index
+{
+	_encoder->setThreadgroupMemoryLength(length, index);
+}
+
+// everything Indium allocates is always resident, so there is nothing to do for these
+
+- (void)useResource: (id<MTLResource>)resource
+              usage: (NSUInteger)usage
+{
+}
+
+- (void)useResources: (const id<MTLResource> __nonnull [__nonnull])resources
+               count: (NSUInteger)count
+               usage: (NSUInteger)usage
+{
 }
 
 #else

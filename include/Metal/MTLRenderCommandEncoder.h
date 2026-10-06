@@ -15,6 +15,34 @@ METAL_DECLARATIONS_BEGIN
 @protocol MTLRasterizationRateMap;
 @protocol MTLTexture;
 @protocol MTLRenderPipelineState;
+@protocol MTLSamplerState;
+@protocol MTLDepthStencilState;
+@protocol MTLResource;
+
+typedef NS_ENUM(NSUInteger, MTLDepthClipMode) {
+	MTLDepthClipModeClip = 0,
+	MTLDepthClipModeClamp = 1,
+};
+
+typedef NS_ENUM(NSUInteger, MTLVisibilityResultMode) {
+	MTLVisibilityResultModeDisabled = 0,
+	MTLVisibilityResultModeBoolean = 1,
+	MTLVisibilityResultModeCounting = 2,
+};
+
+typedef NS_OPTIONS(NSUInteger, MTLResourceUsage) {
+	MTLResourceUsageRead = 1 << 0,
+	MTLResourceUsageWrite = 1 << 1,
+	MTLResourceUsageSample = 1 << 2,
+};
+
+typedef NS_OPTIONS(NSUInteger, MTLRenderStages) {
+	MTLRenderStageVertex = 1 << 0,
+	MTLRenderStageFragment = 1 << 1,
+	MTLRenderStageTile = 1 << 2,
+	MTLRenderStageObject = 1 << 3,
+	MTLRenderStageMesh = 1 << 4,
+};
 
 @class MTLRenderPassColorAttachmentDescriptorArray;
 @class MTLRenderPassDepthAttachmentDescriptor;
@@ -265,6 +293,72 @@ MTL_EXPORT
                     indexType: (MTLIndexType)indexType
                   indexBuffer: (id<MTLBuffer>)indexBuffer
             indexBufferOffset: (NSUInteger)indexBufferOffset;
+
+//
+// fixed-function state
+//
+
+- (void)setDepthStencilState: (id<MTLDepthStencilState>)depthStencilState;
+- (void)setStencilReferenceValue: (uint32_t)referenceValue;
+- (void)setStencilFrontReferenceValue: (uint32_t)frontReferenceValue
+                   backReferenceValue: (uint32_t)backReferenceValue;
+- (void)setBlendColorRed: (float)red
+                   green: (float)green
+                    blue: (float)blue
+                   alpha: (float)alpha;
+- (void)setDepthBias: (float)depthBias
+          slopeScale: (float)slopeScale
+               clamp: (float)clamp;
+- (void)setDepthClipMode: (MTLDepthClipMode)depthClipMode;
+- (void)setVisibilityResultMode: (MTLVisibilityResultMode)mode
+                         offset: (NSUInteger)offset;
+
+//
+// textures and samplers
+//
+
+- (void)setVertexTexture: (id<MTLTexture>)texture
+                 atIndex: (NSUInteger)index;
+- (void)setVertexTextures: (const id<MTLTexture> __nullable [__nonnull])textures
+                withRange: (NSRange)range;
+- (void)setVertexSamplerState: (id<MTLSamplerState>)sampler
+                      atIndex: (NSUInteger)index;
+- (void)setVertexSamplerState: (id<MTLSamplerState>)sampler
+                  lodMinClamp: (float)lodMinClamp
+                  lodMaxClamp: (float)lodMaxClamp
+                      atIndex: (NSUInteger)index;
+- (void)setVertexSamplerStates: (const id<MTLSamplerState> __nullable [__nonnull])samplers
+                     withRange: (NSRange)range;
+
+- (void)setFragmentTexture: (id<MTLTexture>)texture
+                   atIndex: (NSUInteger)index;
+- (void)setFragmentTextures: (const id<MTLTexture> __nullable [__nonnull])textures
+                  withRange: (NSRange)range;
+- (void)setFragmentSamplerState: (id<MTLSamplerState>)sampler
+                        atIndex: (NSUInteger)index;
+- (void)setFragmentSamplerState: (id<MTLSamplerState>)sampler
+                    lodMinClamp: (float)lodMinClamp
+                    lodMaxClamp: (float)lodMaxClamp
+                        atIndex: (NSUInteger)index;
+- (void)setFragmentSamplerStates: (const id<MTLSamplerState> __nullable [__nonnull])samplers
+                       withRange: (NSRange)range;
+
+//
+// resource residency (all memory Indium hands out is resident, so these are hints only)
+//
+
+- (void)useResource: (id<MTLResource>)resource
+              usage: (MTLResourceUsage)usage;
+- (void)useResource: (id<MTLResource>)resource
+              usage: (MTLResourceUsage)usage
+             stages: (MTLRenderStages)stages;
+- (void)useResources: (const id<MTLResource> __nonnull [__nonnull])resources
+               count: (NSUInteger)count
+               usage: (MTLResourceUsage)usage;
+- (void)useResources: (const id<MTLResource> __nonnull [__nonnull])resources
+               count: (NSUInteger)count
+               usage: (MTLResourceUsage)usage
+              stages: (MTLRenderStages)stages;
 
 @end
 

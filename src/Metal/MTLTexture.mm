@@ -11,6 +11,10 @@
 
 #if DARLING_METAL_ENABLED
 
+{
+	MTLTextureUsage _usage;
+}
+
 @synthesize texture = _texture;
 @synthesize device = _device;
 @synthesize resourceOptions = _resourceOptions;
@@ -20,11 +24,20 @@
                          device: (id<MTLDevice>)device
                 resourceOptions: (MTLResourceOptions)options
 {
+	return [self initWithTexture: texture device: device resourceOptions: options usage: MTLTextureUsageUnknown];
+}
+
+- (instancetype)initWithTexture: (std::shared_ptr<Indium::Texture>)texture
+                         device: (id<MTLDevice>)device
+                resourceOptions: (MTLResourceOptions)options
+                          usage: (MTLTextureUsage)usage
+{
 	self = [super init];
 	if (self != nil) {
 		_texture = texture;
 		_device = [device retain];
 		_resourceOptions = options;
+		_usage = usage;
 	}
 	return self;
 }
@@ -102,8 +115,8 @@
 
 - (MTLTextureUsage)usage
 {
-	// TODO
-	return MTLTextureUsageUnknown;
+	// only known for textures created from a descriptor
+	return _usage;
 }
 
 - (BOOL)allowGPUOptimizedContents
@@ -131,7 +144,7 @@
 	if (!tex) {
 		return nil;
 	}
-	return [[MTLTextureInternal alloc] initWithTexture: tex device: _device resourceOptions: _resourceOptions];
+	return [[MTLTextureInternal alloc] initWithTexture: tex device: _device resourceOptions: _resourceOptions usage: _usage];
 }
 
 - (id<MTLTexture>)newTextureViewWithPixelFormat: (MTLPixelFormat)pixelFormat
@@ -143,7 +156,7 @@
 	if (!tex) {
 		return nil;
 	}
-	return [[MTLTextureInternal alloc] initWithTexture: tex device: _device resourceOptions: _resourceOptions];
+	return [[MTLTextureInternal alloc] initWithTexture: tex device: _device resourceOptions: _resourceOptions usage: _usage];
 }
 
 - (id<MTLTexture>)newTextureViewWithPixelFormat: (MTLPixelFormat)pixelFormat
@@ -156,7 +169,7 @@
 	if (!tex) {
 		return nil;
 	}
-	return [[MTLTextureInternal alloc] initWithTexture: tex device: _device resourceOptions: _resourceOptions];
+	return [[MTLTextureInternal alloc] initWithTexture: tex device: _device resourceOptions: _resourceOptions usage: _usage];
 }
 
 - (void)replaceRegion: (MTLRegion)region

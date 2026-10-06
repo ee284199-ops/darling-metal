@@ -5,6 +5,35 @@
 #import <Metal/stubs.h>
 #import <Foundation/NSObjectInternal.h>
 
+#if DARLING_METAL_ENABLED
+
+static BOOL pixelFormatHasDepth(MTLPixelFormat format) {
+	switch (format) {
+		case MTLPixelFormatDepth16Unorm:
+		case MTLPixelFormatDepth32Float:
+		case MTLPixelFormatDepth24Unorm_Stencil8:
+		case MTLPixelFormatDepth32Float_Stencil8:
+			return YES;
+		default:
+			return NO;
+	}
+};
+
+static BOOL pixelFormatHasStencil(MTLPixelFormat format) {
+	switch (format) {
+		case MTLPixelFormatStencil8:
+		case MTLPixelFormatDepth24Unorm_Stencil8:
+		case MTLPixelFormatDepth32Float_Stencil8:
+		case MTLPixelFormatX32_Stencil8:
+		case MTLPixelFormatX24_Stencil8:
+			return YES;
+		default:
+			return NO;
+	}
+};
+
+#endif
+
 @implementation MTKView
 
 #if DARLING_METAL_ENABLED
@@ -16,6 +45,7 @@
 	BOOL _enableSetNeedsDisplay;
 	id<CAMetalDrawable> _currentDrawable;
 	NSTimer* _frameTimer;
+	id<MTLTexture> _depthStencilTexture;
 }
 
 //
@@ -128,6 +158,24 @@
 	desc.colorAttachments[0].loadAction = MTLLoadActionClear;
 	desc.colorAttachments[0].storeAction = MTLStoreActionStore;
 
+	id<MTLTexture> depthStencilTexture = self.depthStencilTexture;
+
+	if (depthStencilTexture) {
+		if (pixelFormatHasDepth(_depthStencilPixelFormat)) {
+			desc.depthAttachment.texture = depthStencilTexture;
+			desc.depthAttachment.clearDepth = _clearDepth;
+			desc.depthAttachment.loadAction = MTLLoadActionClear;
+			desc.depthAttachment.storeAction = MTLStoreActionDontCare;
+		}
+
+		if (pixelFormatHasStencil(_depthStencilPixelFormat)) {
+			desc.stencilAttachment.texture = depthStencilTexture;
+			desc.stencilAttachment.clearStencil = _clearStencil;
+			desc.stencilAttachment.loadAction = MTLLoadActionClear;
+			desc.stencilAttachment.storeAction = MTLStoreActionDontCare;
+		}
+	}
+
 	return desc;
 }
 
@@ -141,13 +189,37 @@
 
 - (id<MTLTexture>)depthStencilTexture
 {
-	// TODO
-	return nil;
+	id<MTLDevice> device = self.device;
+	CGSize size = self.drawableSize;
+
+	if (_depthStencilPixelFormat == MTLPixelFormatInvalid || !device || size.width < 1 || size.height < 1) {
+		return nil;
+	}
+
+	// (re)create it whenever it no longer matches the drawable or the requested format
+	if (_depthStencilTexture == nil
+		|| _depthStencilTexture.width != (NSUInteger)size.width
+		|| _depthStencilTexture.height != (NSUInteger)size.height
+		|| _depthStencilTexture.pixelFormat != _depthStencilPixelFormat
+		|| _depthStencilTexture.sampleCount != _sampleCount)
+	{
+		[_depthStencilTexture release];
+
+		MTLTextureDescriptor* desc = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat: _depthStencilPixelFormat width: size.width height: size.height mipmapped: NO];
+		desc.textureType = (_sampleCount > 1) ? MTLTextureType2DMultisample : MTLTextureType2D;
+		desc.sampleCount = _sampleCount;
+		desc.usage = _depthStencilAttachmentTextureUsage;
+		desc.storageMode = _depthStencilStorageMode;
+
+		_depthStencilTexture = [device newTextureWithDescriptor: desc];
+	}
+
+	return _depthStencilTexture;
 }
 
 - (id<MTLTexture>)multisampleColorTexture
 {
-	// TODO
+	// TODO: Indium doesn't resolve multisample attachments yet
 	return nil;
 }
 
@@ -218,7 +290,7 @@
 	_clearColor = MTLClearColorMake(0, 0, 0, 1);
 	_depthStencilPixelFormat = MTLPixelFormatInvalid;
 	_depthStencilAttachmentTextureUsage = MTLTextureUsageRenderTarget;
-	_depthStencilStorageMode = MTLStorageModeShared; // TODO: check what the actual default is
+	_depthStencilStorageMode = MTLStorageModePrivate;
 	_clearDepth = 1;
 	_clearStencil = 0;
 	_sampleCount = 1;
@@ -267,6 +339,7 @@
 {
 	objc_storeWeak(&_delegate, nil);
 	[_currentDrawable release];
+	[_depthStencilTexture release];
 	[_frameTimer invalidate];
 	[_frameTimer release];
 	[super dealloc];
@@ -296,8 +369,9 @@
 
 - (void)releaseDrawables
 {
-	// TODO
-	// we don't need this yet since we don't have depth, stencil, or multisample textures
+	// it gets recreated the next time it's needed
+	[_depthStencilTexture release];
+	_depthStencilTexture = nil;
 }
 
 - (void)_resetTimer

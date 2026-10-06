@@ -5,9 +5,16 @@
 #define _METAL_MTLTEXTUREINTERNAL_H_
 
 #import <Metal/MTLTexture.h>
+#import <Metal/MTLTextureDescriptor.h>
 
 #if DARLING_METAL_ENABLED
 #include <indium/indium.hpp>
+#endif
+
+#if DARLING_METAL_ENABLED
+@interface MTLTextureDescriptor (Internal)
+- (Indium::TextureDescriptor)asIndiumDescriptor;
+@end
 #endif
 
 #if DARLING_METAL_ENABLED
@@ -42,8 +49,26 @@ MTL_EXPORT
 - (instancetype)initWithTexture: (std::shared_ptr<Indium::Texture>)texture
                          device: (id<MTLDevice>)device
                 resourceOptions: (MTLResourceOptions)options;
+
+- (instancetype)initWithTexture: (std::shared_ptr<Indium::Texture>)texture
+                         device: (id<MTLDevice>)device
+                resourceOptions: (MTLResourceOptions)options
+                          usage: (MTLTextureUsage)usage;
 #endif
 
 @end
+
+#if DARLING_METAL_ENABLED
+// the Indium textures behind the first `count` entries of a C array of Metal textures (nil stays null)
+NS_INLINE
+std::vector<std::shared_ptr<Indium::Texture>> MTLTexturesToIndium(const id<MTLTexture> __nullable textures[], NSUInteger count) {
+	std::vector<std::shared_ptr<Indium::Texture>> result;
+	result.reserve(count);
+	for (NSUInteger i = 0; i < count; ++i) {
+		result.push_back(((MTLTextureInternal*)textures[i]).texture);
+	}
+	return result;
+};
+#endif
 
 #endif // _METAL_MTLTEXTUREINTERNAL_H_

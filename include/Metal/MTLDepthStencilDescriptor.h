@@ -6,7 +6,31 @@
 
 #import <Foundation/Foundation.h>
 
-@interface MTLDepthStencilDescriptor : NSObject
+#import <Metal/MTLDefines.h>
+#import <Metal/MTLStencilDescriptor.h>
+
+METAL_DECLARATIONS_BEGIN
+
+@protocol MTLDevice;
+
+MTL_EXPORT
+@interface MTLDepthStencilDescriptor : NSObject <NSCopying>
+
+@property(nonatomic) MTLCompareFunction depthCompareFunction;
+@property(nonatomic, getter=isDepthWriteEnabled) BOOL depthWriteEnabled;
+@property(copy, nonatomic, null_resettable) MTLStencilDescriptor* frontFaceStencil;
+@property(copy, nonatomic, null_resettable) MTLStencilDescriptor* backFaceStencil;
+@property(nullable, copy, nonatomic) NSString* label;
+
 @end
+
+@protocol MTLDepthStencilState <NSObject>
+
+@property(nullable, readonly) NSString* label;
+@property(readonly) id<MTLDevice> device;
+
+@end
+
+METAL_DECLARATIONS_END
 
 #endif // _METAL_MTLDEPTHSTENCILDESCRIPTOR_H_

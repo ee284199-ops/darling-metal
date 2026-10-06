@@ -13,13 +13,15 @@ METAL_DECLARATIONS_BEGIN
 @protocol MTLComputeCommandEncoder;
 @protocol MTLCounterSampleBuffer;
 @protocol MTLBuffer;
+@protocol MTLTexture;
+@protocol MTLSamplerState;
+@protocol MTLResource;
 
 @class MTLComputePassDescriptor;
 @class MTLComputePassSampleBufferAttachmentDescriptorArray;
 @class MTLComputePassSampleBufferAttachmentDescriptor;
 
-// TODO: check what the actual value is
-#define MTLCounterDontSample 0
+#define MTLCounterDontSample ((NSUInteger)-1)
 
 MTL_EXPORT
 @interface MTLComputePassSampleBufferAttachmentDescriptor : NSObject <NSCopying>
@@ -73,8 +75,36 @@ MTL_EXPORT
 - (void)dispatchThreadgroups: (MTLSize)threadgroupsPerGrid
        threadsPerThreadgroup: (MTLSize)threadsPerThreadgroup;
 
-- (void)dispatchThreads: (MTLSize)threadsPerGrid 
+- (void)dispatchThreads: (MTLSize)threadsPerGrid
   threadsPerThreadgroup: (MTLSize)threadsPerThreadgroup;
+
+- (void)setTexture: (id<MTLTexture>)texture
+           atIndex: (NSUInteger)index;
+
+- (void)setTextures: (const id<MTLTexture> __nullable [__nonnull])textures
+          withRange: (NSRange)range;
+
+- (void)setSamplerState: (id<MTLSamplerState>)sampler
+                atIndex: (NSUInteger)index;
+
+- (void)setSamplerState: (id<MTLSamplerState>)sampler
+            lodMinClamp: (float)lodMinClamp
+            lodMaxClamp: (float)lodMaxClamp
+                atIndex: (NSUInteger)index;
+
+- (void)setSamplerStates: (const id<MTLSamplerState> __nullable [__nonnull])samplers
+               withRange: (NSRange)range;
+
+- (void)setThreadgroupMemoryLength: (NSUInteger)length
+                           atIndex: (NSUInteger)index;
+
+// all memory Indium hands out is resident, so these are hints only
+- (void)useResource: (id<MTLResource>)resource
+              usage: (NSUInteger)usage;
+
+- (void)useResources: (const id<MTLResource> __nonnull [__nonnull])resources
+               count: (NSUInteger)count
+               usage: (NSUInteger)usage;
 
 @end
 

@@ -4,6 +4,7 @@
 #ifndef _METAL_METAL_H_
 #define _METAL_METAL_H_
 
+#import <Metal/MTLBlitCommandEncoder.h>
 #import <Metal/MTLBuffer.h>
 #import <Metal/MTLCommandBuffer.h>
 #import <Metal/MTLCommandEncoder.h>

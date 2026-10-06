@@ -4,6 +4,8 @@
 #import <Metal/MTLRenderCommandEncoderInternal.h>
 #import <Metal/stubs.h>
 #import <Metal/MTLTextureInternal.h>
+#import <Metal/MTLSamplerInternal.h>
+#import <Metal/MTLDepthStencilInternal.h>
 #import <Metal/MTLBufferInternal.h>
 #import <Metal/MTLDevice.h>
 #import <Metal/MTLRenderPipelineInternal.h>
@@ -558,6 +560,19 @@ MTL_UNSUPPORTED_CLASS
 	_encoder->endEncoding();
 }
 
+- (void)insertDebugSignpost: (NSString*)string
+{
+	// debug markers are only for GPU debugging tools, which we don't have
+}
+
+- (void)pushDebugGroup: (NSString*)string
+{
+}
+
+- (void)popDebugGroup
+{
+}
+
 //
 // methods
 //
@@ -729,6 +744,151 @@ MTL_UNSUPPORTED_CLASS
             indexBufferOffset: (NSUInteger)indexBufferOffset
 {
 	_encoder->drawIndexedPrimitives(static_cast<Indium::PrimitiveType>(primitiveType), indexCount, static_cast<Indium::IndexType>(indexType), ((MTLBufferInternal*)indexBuffer).buffer, indexBufferOffset);
+}
+
+//
+// fixed-function state
+//
+
+- (void)setDepthStencilState: (id<MTLDepthStencilState>)depthStencilState
+{
+	_encoder->setDepthStencilState(((MTLDepthStencilStateInternal*)depthStencilState).state);
+}
+
+- (void)setStencilReferenceValue: (uint32_t)referenceValue
+{
+	_encoder->setStencilReferenceValue(referenceValue);
+}
+
+- (void)setStencilFrontReferenceValue: (uint32_t)frontReferenceValue
+                   backReferenceValue: (uint32_t)backReferenceValue
+{
+	_encoder->setStencilReferenceValue(frontReferenceValue, backReferenceValue);
+}
+
+- (void)setBlendColorRed: (float)red
+                   green: (float)green
+                    blue: (float)blue
+                   alpha: (float)alpha
+{
+	_encoder->setBlendColor(red, green, blue, alpha);
+}
+
+- (void)setDepthBias: (float)depthBias
+          slopeScale: (float)slopeScale
+               clamp: (float)clamp
+{
+	_encoder->setDepthBias(depthBias, slopeScale, clamp);
+}
+
+- (void)setDepthClipMode: (MTLDepthClipMode)depthClipMode
+{
+	_encoder->setDepthClipMode(static_cast<Indium::DepthClipMode>(depthClipMode));
+}
+
+- (void)setVisibilityResultMode: (MTLVisibilityResultMode)mode
+                         offset: (NSUInteger)offset
+{
+	_encoder->setVisibilityResultMode(static_cast<Indium::VisibilityResultMode>(mode), offset);
+}
+
+//
+// textures and samplers
+//
+
+- (void)setVertexTexture: (id<MTLTexture>)texture
+                 atIndex: (NSUInteger)index
+{
+	_encoder->setVertexTexture(((MTLTextureInternal*)texture).texture, index);
+}
+
+- (void)setVertexTextures: (const id<MTLTexture> __nullable [__nonnull])textures
+                withRange: (NSRange)range
+{
+	_encoder->setVertexTextures(MTLTexturesToIndium(textures, range.length), NSRangeToIndium(range));
+}
+
+- (void)setVertexSamplerState: (id<MTLSamplerState>)sampler
+                      atIndex: (NSUInteger)index
+{
+	_encoder->setVertexSamplerState(((MTLSamplerStateInternal*)sampler).state, index);
+}
+
+- (void)setVertexSamplerState: (id<MTLSamplerState>)sampler
+                  lodMinClamp: (float)lodMinClamp
+                  lodMaxClamp: (float)lodMaxClamp
+                      atIndex: (NSUInteger)index
+{
+	_encoder->setVertexSamplerState(((MTLSamplerStateInternal*)sampler).state, lodMinClamp, lodMaxClamp, index);
+}
+
+- (void)setVertexSamplerStates: (const id<MTLSamplerState> __nullable [__nonnull])samplers
+                     withRange: (NSRange)range
+{
+	_encoder->setVertexSamplerStates(MTLSamplerStatesToIndium(samplers, range.length), NSRangeToIndium(range));
+}
+
+- (void)setFragmentTexture: (id<MTLTexture>)texture
+                   atIndex: (NSUInteger)index
+{
+	_encoder->setFragmentTexture(((MTLTextureInternal*)texture).texture, index);
+}
+
+- (void)setFragmentTextures: (const id<MTLTexture> __nullable [__nonnull])textures
+                  withRange: (NSRange)range
+{
+	auto indiumTextures = MTLTexturesToIndium(textures, range.length);
+	_encoder->setFragmentTextures(indiumTextures, NSRangeToIndium(range));
+}
+
+- (void)setFragmentSamplerState: (id<MTLSamplerState>)sampler
+                        atIndex: (NSUInteger)index
+{
+	_encoder->setFragmentSamplerState(((MTLSamplerStateInternal*)sampler).state, index);
+}
+
+- (void)setFragmentSamplerState: (id<MTLSamplerState>)sampler
+                    lodMinClamp: (float)lodMinClamp
+                    lodMaxClamp: (float)lodMaxClamp
+                        atIndex: (NSUInteger)index
+{
+	_encoder->setFragmentSamplerState(((MTLSamplerStateInternal*)sampler).state, lodMinClamp, lodMaxClamp, index);
+}
+
+- (void)setFragmentSamplerStates: (const id<MTLSamplerState> __nullable [__nonnull])samplers
+                       withRange: (NSRange)range
+{
+	_encoder->setFragmentSamplerStates(MTLSamplerStatesToIndium(samplers, range.length), NSRangeToIndium(range));
+}
+
+//
+// resource residency
+//
+// Everything Indium allocates is always resident, so there is nothing to do here.
+//
+
+- (void)useResource: (id<MTLResource>)resource
+              usage: (MTLResourceUsage)usage
+{
+}
+
+- (void)useResource: (id<MTLResource>)resource
+              usage: (MTLResourceUsage)usage
+             stages: (MTLRenderStages)stages
+{
+}
+
+- (void)useResources: (const id<MTLResource> __nonnull [__nonnull])resources
+               count: (NSUInteger)count
+               usage: (MTLResourceUsage)usage
+{
+}
+
+- (void)useResources: (const id<MTLResource> __nonnull [__nonnull])resources
+               count: (NSUInteger)count
+               usage: (MTLResourceUsage)usage
+              stages: (MTLRenderStages)stages
+{
 }
 
 #else
