@@ -46,6 +46,7 @@ static BOOL pixelFormatHasStencil(MTLPixelFormat format) {
 	id<CAMetalDrawable> _currentDrawable;
 	NSTimer* _frameTimer;
 	id<MTLTexture> _depthStencilTexture;
+	id<MTLTexture> _multisampleColorTexture;
 }
 
 //
@@ -153,10 +154,20 @@ static BOOL pixelFormatHasStencil(MTLPixelFormat format) {
 
 	MTLRenderPassDescriptor* desc = [MTLRenderPassDescriptor renderPassDescriptor];
 
-	desc.colorAttachments[0].texture = drawable.texture;
+	id<MTLTexture> multisampleColorTexture = self.multisampleColorTexture;
+
+	if (multisampleColorTexture) {
+		// render into the multisampled texture and resolve into the drawable
+		desc.colorAttachments[0].texture = multisampleColorTexture;
+		desc.colorAttachments[0].resolveTexture = drawable.texture;
+		desc.colorAttachments[0].storeAction = MTLStoreActionMultisampleResolve;
+	} else {
+		desc.colorAttachments[0].texture = drawable.texture;
+		desc.colorAttachments[0].storeAction = MTLStoreActionStore;
+	}
+
 	desc.colorAttachments[0].clearColor = _clearColor;
 	desc.colorAttachments[0].loadAction = MTLLoadActionClear;
-	desc.colorAttachments[0].storeAction = MTLStoreActionStore;
 
 	id<MTLTexture> depthStencilTexture = self.depthStencilTexture;
 
@@ -219,8 +230,37 @@ static BOOL pixelFormatHasStencil(MTLPixelFormat format) {
 
 - (id<MTLTexture>)multisampleColorTexture
 {
-	// TODO: Indium doesn't resolve multisample attachments yet
-	return nil;
+	if (_sampleCount <= 1) {
+		return nil;
+	}
+
+	id<MTLDevice> device = self.device;
+	CGSize size = self.drawableSize;
+	MTLPixelFormat colorPixelFormat = self.colorPixelFormat;
+
+	if (!device || size.width < 1 || size.height < 1) {
+		return nil;
+	}
+
+	// (re)create it whenever it no longer matches the drawable, the color format or the sample count
+	if (_multisampleColorTexture == nil
+		|| _multisampleColorTexture.width != (NSUInteger)size.width
+		|| _multisampleColorTexture.height != (NSUInteger)size.height
+		|| _multisampleColorTexture.pixelFormat != colorPixelFormat
+		|| _multisampleColorTexture.sampleCount != _sampleCount)
+	{
+		[_multisampleColorTexture release];
+
+		MTLTextureDescriptor* desc = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat: colorPixelFormat width: size.width height: size.height mipmapped: NO];
+		desc.textureType = MTLTextureType2DMultisample;
+		desc.sampleCount = _sampleCount;
+		desc.usage = _multisampleColorAttachmentTextureUsage;
+		desc.storageMode = MTLStorageModePrivate;
+
+		_multisampleColorTexture = [device newTextureWithDescriptor: desc];
+	}
+
+	return _multisampleColorTexture;
 }
 
 // use the synthesized `preferredFramesPerSecond` getter
@@ -340,6 +380,7 @@ static BOOL pixelFormatHasStencil(MTLPixelFormat format) {
 	objc_storeWeak(&_delegate, nil);
 	[_currentDrawable release];
 	[_depthStencilTexture release];
+	[_multisampleColorTexture release];
 	[_frameTimer invalidate];
 	[_frameTimer release];
 	[super dealloc];
@@ -372,6 +413,9 @@ static BOOL pixelFormatHasStencil(MTLPixelFormat format) {
 	// it gets recreated the next time it's needed
 	[_depthStencilTexture release];
 	_depthStencilTexture = nil;
+
+	[_multisampleColorTexture release];
+	_multisampleColorTexture = nil;
 }
 
 - (void)_resetTimer
