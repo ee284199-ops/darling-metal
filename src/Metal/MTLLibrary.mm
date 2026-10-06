@@ -31,8 +31,8 @@ MTL_EXTERN NSString* const MTLLibraryErrorDomain = @"MTLLibraryErrorDomain";
 		_function = function;
 		_device = [device retain];
 
-		// cache the name
-		_name = [NSString stringWithUTF8String: _function->name().c_str()];
+		// cache the name (released in dealloc)
+		_name = [[NSString alloc] initWithUTF8String: _function->name().c_str()];
 	}
 	return self;
 }
