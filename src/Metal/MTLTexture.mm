@@ -195,8 +195,7 @@
       fromRegion: (MTLRegion)region
      mipmapLevel: (NSUInteger)level
 {
-	NSLog(@"STUB: getBytes:bytesPerRow:fromRegion:mipmapLevel:");
-	abort();
+	_texture->getBytes(pixelBytes, bytesPerRow, MTLRegionToIndium(region), level);
 }
 
 - (void)getBytes: (void*)pixelBytes
@@ -206,8 +205,7 @@
      mipmapLevel: (NSUInteger)level
            slice: (NSUInteger)slice
 {
-	NSLog(@"STUB: getBytes:bytesPerRow:bytesPerImage:fromRegion:mipmapLevel:slice:");
-	abort();
+	_texture->getBytes(pixelBytes, bytesPerRow, bytesPerImage, MTLRegionToIndium(region), level, slice);
 }
 
 #else
