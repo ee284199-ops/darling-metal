@@ -23,7 +23,6 @@
 @synthesize colorAttachments = _colorAttachments;
 @synthesize depthAttachmentPixelFormat = _depthAttachmentPixelFormat;
 @synthesize stencilAttachmentPixelFormat = _stencilAttachmentPixelFormat;
-@synthesize sampleCount = _sampleCount;
 @synthesize alphaToCoverageEnabled = _alphaToCoverageEnabled;
 @synthesize alphaToOneEnabled = _alphaToOneEnabled;
 @synthesize rasterizationEnabled = _rasterizationEnabled;
@@ -47,6 +46,17 @@
 @synthesize vertexPreloadedLibraries = _vertexPreloadedLibraries;
 @synthesize label = _label;
 
+// `sampleCount` and `rasterSampleCount` are aliases for the same value
+- (NSUInteger)sampleCount
+{
+	return _rasterSampleCount;
+}
+
+- (void)setSampleCount: (NSUInteger)sampleCount
+{
+	_rasterSampleCount = sampleCount;
+}
+
 - (void)_doInit
 {
 	_maxVertexCallStackDepth = 1;
@@ -56,7 +66,6 @@
 	_colorAttachments = [MTLRenderPipelineColorAttachmentDescriptorArray new];
 	_depthAttachmentPixelFormat = MTLPixelFormatInvalid;
 	_stencilAttachmentPixelFormat = MTLPixelFormatInvalid;
-	_sampleCount = 1;
 	_rasterizationEnabled = YES;
 	_inputPrimitiveTopology = MTLPrimitiveTopologyClassUnspecified;
 	_rasterSampleCount = 1; // good guess; TODO: check the actual default
@@ -118,7 +127,7 @@
 	copy->_colorAttachments = [_colorAttachments copy];
 	copy.depthAttachmentPixelFormat = _depthAttachmentPixelFormat;
 	copy.stencilAttachmentPixelFormat = _stencilAttachmentPixelFormat;
-	copy.sampleCount = _sampleCount;
+	copy.sampleCount = _rasterSampleCount;
 	copy.alphaToCoverageEnabled = _alphaToCoverageEnabled;
 	copy.alphaToOneEnabled = _alphaToOneEnabled;
 	copy.rasterizationEnabled = _rasterizationEnabled;
