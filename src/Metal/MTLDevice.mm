@@ -567,9 +567,29 @@ static NSError* sourceCompilationUnsupportedError(void) {
                                   options: (MTLResourceOptions)options
                               deallocator: (void (^)(void* pointer, NSUInteger length))deallocator
 {
-	// Indium can't wrap existing memory, so the buffer gets a copy of the bytes. That's enough for data
-	// that's set up once, but unlike on macOS, later CPU writes through `pointer` won't reach the buffer
-	// (nor will GPU writes show up there).
+	// copy the block since the Indium buffer will outlive this call; it may be nil,
+	// in which case messaging it below is a no-op
+	void (^deallocatorCopy)(void* pointer, NSUInteger length) = [deallocator copy];
+
+	auto buf = _device->newBufferNoCopy(pointer, length, static_cast<Indium::ResourceOptions>(options), [deallocatorCopy, pointer, length]() {
+		if (deallocatorCopy != nil) {
+			deallocatorCopy(pointer, length);
+		}
+		[deallocatorCopy release];
+	});
+
+	if (buf) {
+		// unlike in the fallback below, the Indium buffer wraps `pointer` itself, so CPU writes
+		// through `pointer` reach the buffer (and vice versa), just like on macOS; the block is
+		// invoked (and the memory handed back) once the buffer and its Vulkan memory are gone
+		return [[MTLBufferInternal alloc] initWithBuffer: buf device: self resourceOptions: options];
+	}
+
+	[deallocatorCopy release];
+
+	// Indium couldn't wrap the memory (unsupported device, bad alignment, ...), so the buffer gets a copy
+	// of the bytes instead. That's enough for data that's set up once, but unlike on macOS, later CPU
+	// writes through `pointer` won't reach the buffer (nor will GPU writes show up there).
 	id<MTLBuffer> buffer = [self newBufferWithBytes: pointer length: length options: options];
 
 	if (buffer != nil && deallocator != nil) {
