@@ -142,11 +142,20 @@ struct MTLCommandBufferHandlerWrapper {
 - (void)waitUntilScheduled
 {
 	// Indium submits the work as soon as the buffer is committed
+	if (_status == MTLCommandBufferStatusCommitted) {
+		_status = MTLCommandBufferStatusScheduled;
+	}
 }
 
 - (void)waitUntilCompleted
 {
 	_commandBuffer->waitUntilCompleted();
+
+	// Indium wakes us up before it runs the completed handlers, and one of those is what normally
+	// updates `_status`; it has to read "completed" as soon as this returns
+	if (_status < MTLCommandBufferStatusCompleted) {
+		_status = MTLCommandBufferStatusCompleted;
+	}
 }
 
 - (void)presentDrawable: (id<MTLDrawable>)drawable
