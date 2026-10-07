@@ -5,6 +5,7 @@
 #import <Metal/stubs.h>
 #import <Metal/MTLLibraryInternal.h>
 #import <Metal/MTLPipelineInternal.h>
+#import <Metal/MTLVertexDescriptorInternal.h>
 #import <Metal/MTLDevice.h>
 
 #include <map>
@@ -213,7 +214,7 @@ MTL_UNSUPPORTED_CLASS
 		((MTLFunctionInternal*)_fragmentFunction).function,
 		_maxVertexCallStackDepth,
 		_maxFragmentCallStackDepth,
-		std::nullopt, // TODO
+		_vertexDescriptor ? std::optional<Indium::VertexDescriptor>([_vertexDescriptor asIndiumDescriptor]) : std::nullopt,
 		[_vertexBuffers asIndiumDescriptors],
 		[_fragmentBuffers asIndiumDescriptors],
 		[_colorAttachments asContiguousIndiumDescriptors],
